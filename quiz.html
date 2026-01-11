@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2^Two | Daily Logic</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #ffffff; color: #343434; font-family: "Times New Roman", Times, serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
+        
+        .header-logo { font-size: 2.2rem; font-weight: 700; margin: 20px 0; letter-spacing: -1px; text-decoration: none; color: inherit; display: block; transition: opacity 0.2s; }
+        .header-logo:hover { opacity: 0.7; }
+        .header-logo sup { font-size: 1rem; font-weight: 400; vertical-align: super; }
+
+        .quiz-container { width: 95%; max-width: 1200px; background-color: #8E8B82; border-radius: 15px; padding: 50px 100px; display: flex; flex-direction: column; margin-bottom: 50px; color: #343434; transition: all 0.5s ease; }
+        .meta-info { font-style: italic; font-size: 0.9rem; margin-bottom: 10px; opacity: 0.8; }
+        .question-text { font-size: 1.3rem; line-height: 1.6; margin-bottom: 15px; font-weight: bold; }
+        
+        .progress-line-container { width: 100%; height: 2px; background-color: rgba(52, 52, 52, 0.2); margin-bottom: 25px; }
+        .progress-fill { height: 100%; width: 0%; background-color: #343434; transition: width 0.6s ease; }
+
+        .option-item { margin-bottom: 18px; font-size: 1.1rem; display: flex; align-items: center; cursor: pointer; transition: color 0.3s ease; }
+        .option-item input[type="radio"] { appearance: none; width: 20px; height: 20px; border: 2px solid #343434; border-radius: 50%; margin-right: 15px; cursor: pointer; }
+        .option-item input[type="radio"]:checked { background-color: #343434; }
+
+        .submit-row { display: flex; justify-content: flex-end; margin-top: 20px; }
+        .enter-box { background-color: #343434; color: #ffffff; width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; font-size: 1.6rem; cursor: pointer; border: 2px solid transparent; border-radius: 4px; transition: all 0.2s; }
+        .enter-box:hover { background-color: #8E8B82; border-color: #343434; color: #343434; }
+
+        .explanation-section { max-height: 0; overflow: hidden; transition: all 0.6s ease; opacity: 0; }
+        .explanation-section.visible { max-height: 1000px; opacity: 1; margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(52, 52, 52, 0.3); }
+        
+        /* Pulse Animation for Loading State */
+        .ai-content { font-style: italic; font-size: 1.15rem; line-height: 1.8; white-space: pre-wrap; }
+        .loading-pulse { animation: pulse 1.5s infinite ease-in-out; opacity: 0.6; }
+
+        footer { margin-top: auto; padding-bottom: 40px; display: flex; align-items: center; gap: 12px; font-size: 0.9rem; }
+        .github-icon { width: 18px; height: 18px; fill: #343434; }
+
+        @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        .shake { animation: shake 0.2s ease-in-out; }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="header-logo">2<sup>Two</sup></a>
+
+    <div class="quiz-container">
+        <div id="meta" class="meta-info"></div>
+        <h2 id="qText" class="question-text">Syncing logic...</h2>
+        <div class="progress-line-container"><div id="pBar" class="progress-fill"></div></div>
+        <div id="options" class="options-list"></div>
+        <div class="submit-row"><button id="submitBtn" class="enter-box" onclick="handleAction()">↵</button></div>
+        <div id="explanation" class="explanation-section"><p id="aiContent" class="ai-content"></p></div>
+    </div>
+
+    <footer><span>Designed by P.</span> | <a href="https://github.com/cokenotfound"><svg class="github-icon" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.76-1.604-2.665-.3-5.467-1.334-5.467-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg></a></footer>
+
+    <script>
+        let questions = [], currentIdx = 0, isAnswered = false, correctCount = 0;
+        let aiController = null;
+
+        async function init() {
+            try {
+                const res = await fetch('http://127.0.0.1:8000/get_questions');
+                questions = await res.json();
+                if (questions.length > 0) render();
+            } catch (e) { document.getElementById('qText').innerText = "Logic Offline."; }
+        }
+
+        function render() {
+            if (aiController) aiController.abort();
+            const q = questions[currentIdx];
+            document.getElementById('meta').innerText = `${q.category} | ${q.type}`;
+            document.getElementById('qText').innerText = q.question;
+            document.getElementById('pBar').style.width = `${(currentIdx / questions.length) * 100}%`;
+            document.getElementById('options').innerHTML = q.options.map(opt => `
+                <label class="option-item"><input type="radio" name="quiz" value="${opt}"> ${opt}</label>
+            `).join('');
+            document.getElementById('explanation').classList.remove('visible');
+            document.getElementById('aiContent').classList.remove('loading-pulse');
+            document.getElementById('aiContent').innerText = "";
+        }
+
+        async function handleAction() {
+            const submitBtn = document.getElementById('submitBtn');
+            const expSection = document.getElementById('explanation');
+            const aiContent = document.getElementById('aiContent');
+
+            if (isAnswered) {
+                currentIdx++;
+                if (currentIdx < questions.length) { isAnswered = false; render(); }
+                else { showFinalState(); }
+            } else {
+                const selected = document.querySelector('input[name="quiz"]:checked');
+                if (!selected) {
+                    submitBtn.classList.add('shake');
+                    setTimeout(() => submitBtn.classList.remove('shake'), 200);
+                    return;
+                }
+
+                const userAnswer = selected.value;
+                const qData = questions[currentIdx];
+                if (userAnswer === qData.answer) correctCount++;
+
+                document.querySelectorAll('.option-item').forEach(label => {
+                    const val = label.querySelector('input').value;
+                    if (val === qData.answer) { label.style.color = "#1b5e20"; label.style.fontWeight = "900"; } 
+                    else if (val === userAnswer) { label.style.color = "#b71c1c"; }
+                });
+
+                isAnswered = true;
+                aiContent.innerText = "AI is generating explanation...";
+                aiContent.classList.add('loading-pulse');
+                expSection.classList.add('visible');
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+
+                aiController = new AbortController();
+                try {
+                    const res = await fetch(`http://127.0.0.1:8000/generate_logic?question=${encodeURIComponent(qData.question)}&answer=${encodeURIComponent(qData.answer)}`, { signal: aiController.signal });
+                    const data = await res.json();
+                    aiContent.classList.remove('loading-pulse');
+                    aiContent.innerText = `Explanation:\n"${data.explanation}"`;
+                } catch (e) {
+                    if (e.name !== 'AbortError') {
+                        aiContent.classList.remove('loading-pulse');
+                        aiContent.innerText = "AI Sync Failed.";
+                    }
+                }
+            }
+        }
+
+        function showFinalState() {
+            if (aiController) aiController.abort();
+            document.getElementById('pBar').style.width = "100%";
+            document.getElementById('meta').innerText = "";
+            
+            const qText = document.getElementById('qText');
+            qText.style.textAlign = "center";
+            qText.style.fontSize = "2rem";
+
+            // Determine colors based on score
+            const scoreColor = (correctCount < 4) ? "#b71c1c" : "#1b5e20"; // Red if < 4, else Green
+            const totalColor = "#1b5e20"; // Always Green
+
+            qText.innerHTML = `
+                Thanks for Tuning In.<br>
+                You got <span style="color: ${scoreColor}">${correctCount}</span> 
+                out of <span style="color: ${totalColor}">${questions.length}</span>
+            `;
+            
+            document.getElementById('options').innerHTML = `
+                <div style="margin-top: 30px; text-align: center; animation: fadeIn 0.8s ease forwards;">
+                    <blockquote style="font-style: italic; font-size: 1.4rem; line-height: 1.6;">
+                        "We are what we repeatedly do. Excellence, then, is not an act, but a habit."
+                    </blockquote>
+                    <p style="margin-top: 15px; font-weight: bold; opacity: 0.8;">— Aristotle</p>
+                </div>`;
+            
+            document.getElementById('submitBtn').style.display = "none";
+            document.getElementById('explanation').style.display = "none";
+        }
+
+        document.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleAction(); });
+        init();
+    </script>
+</body>
+</html>
